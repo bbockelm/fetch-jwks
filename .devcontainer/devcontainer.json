@@ -1,0 +1,19 @@
+{
+  "name": "fetch-jwks",
+  "image": "mcr.microsoft.com/devcontainers/go:1-1.22",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {}
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "go.toolsManagement.autoUpdate": true,
+        "go.useLanguageServer": true
+      },
+      "extensions": [
+        "golang.Go"
+      ]
+    }
+  },
+  "postCreateCommand": "go version"
+}

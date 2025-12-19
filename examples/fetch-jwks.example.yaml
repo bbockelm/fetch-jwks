@@ -1,0 +1,9 @@
+cache_dir: /var/cache/jwks
+cache_file: /var/cache/jwks/cache.json
+ttl: 6h
+request_timeout: 10s
+issuers:
+  - issuer: https://demo.scitokens.org
+    jwks_uri: https://demo.scitokens.org/jwks
+  - issuer: https://cilogon.org
+    jwks_uri: https://cilogon.org/jwks
