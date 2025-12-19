@@ -15,5 +15,5 @@
       ]
     }
   },
-  "postCreateCommand": "go version"
+  "postCreateCommand": "go version && pre-commit install --install-hooks"
 }
