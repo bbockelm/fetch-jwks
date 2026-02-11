@@ -79,7 +79,7 @@ func writeFile(path string, doc Document) error {
 
 func hashedFileName(issuer string) string {
 	sum := sha256.Sum256([]byte(issuer))
-	return hex.EncodeToString(sum[:])[:8]
+	return hex.EncodeToString(sum[:])
 }
 
 // LoadFile parses a cache document from a file that may contain multiple

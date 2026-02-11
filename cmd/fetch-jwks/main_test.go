@@ -223,7 +223,7 @@ func TestWritesCacheDirectoryPerIssuer(t *testing.T) {
 
 func hashedName(issuer string) string {
 	sum := sha256.Sum256([]byte(issuer))
-	return hex.EncodeToString(sum[:])[:8]
+	return hex.EncodeToString(sum[:])
 }
 
 func expectPath(expect map[string]string, name string) (string, bool) {
