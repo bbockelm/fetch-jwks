@@ -68,7 +68,7 @@ func Run(ctx context.Context, client *http.Client, cfg config.Config) (cache.Doc
 				results <- result{issuer: iss.Issuer, err: err}
 				return
 			}
-			entry, err := fetchIssuerWithRetry(ctx, client, jwksURI, cfg.TTL.Duration, cached, hasCached)
+			entry, err := fetchIssuerWithRetry(ctx, client, jwksURI, cfg.TTL.Duration, cfg.UseSubsecondTimestamps, cached, hasCached)
 			if err != nil {
 				results <- result{issuer: iss.Issuer, err: err}
 				return
@@ -114,12 +114,12 @@ func cachedEntry(cfg config.Config, issuer string, existing cache.Document) (cac
 	return cache.Entry{}, false, nil
 }
 
-func fetchIssuerWithRetry(ctx context.Context, client *http.Client, jwksURI string, ttl time.Duration, cached cache.Entry, hasCached bool) (cache.Entry, error) {
+func fetchIssuerWithRetry(ctx context.Context, client *http.Client, jwksURI string, ttl time.Duration, useSubsecond bool, cached cache.Entry, hasCached bool) (cache.Entry, error) {
 	const maxAttempts = 3
 	backoff := 200 * time.Millisecond
 	var lastErr error
 	for attempt := 0; attempt < maxAttempts; attempt++ {
-		entry, retryable, err := fetchIssuer(ctx, client, jwksURI, ttl, cached, hasCached)
+		entry, retryable, err := fetchIssuer(ctx, client, jwksURI, ttl, useSubsecond, cached, hasCached)
 		if err == nil {
 			return entry, nil
 		}
@@ -138,7 +138,7 @@ func fetchIssuerWithRetry(ctx context.Context, client *http.Client, jwksURI stri
 	return cache.Entry{}, lastErr
 }
 
-func fetchIssuer(ctx context.Context, client *http.Client, jwksURI string, ttl time.Duration, cached cache.Entry, hasCached bool) (cache.Entry, bool, error) {
+func fetchIssuer(ctx context.Context, client *http.Client, jwksURI string, ttl time.Duration, useSubsecond bool, cached cache.Entry, hasCached bool) (cache.Entry, bool, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, jwksURI, nil)
 	if err != nil {
 		return cache.Entry{}, false, fmt.Errorf("build request: %w", err)
@@ -159,7 +159,7 @@ func fetchIssuer(ctx context.Context, client *http.Client, jwksURI string, ttl t
 		if !hasCached {
 			return cache.Entry{}, false, errors.New("304 received without cached entry")
 		}
-		entry := cache.BuildEntry(cached.JWKS, ttl)
+		entry := cache.BuildEntry(cached.JWKS, ttl, useSubsecond)
 		entry.ETag = cached.ETag
 		return entry, false, nil
 	}
@@ -177,7 +177,7 @@ func fetchIssuer(ctx context.Context, client *http.Client, jwksURI string, ttl t
 		return cache.Entry{}, false, err
 	}
 
-	entry := cache.BuildEntry(jwks, ttl)
+	entry := cache.BuildEntry(jwks, ttl, useSubsecond)
 	entry.ETag = resp.Header.Get("ETag")
 	return entry, false, nil
 }

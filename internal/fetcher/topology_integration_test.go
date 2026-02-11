@@ -53,7 +53,7 @@ func TestTopologyIssuersFetch(t *testing.T) {
 	start := time.Now()
 	doc := make(cache.Document)
 	for _, iss := range cfg.Issuers {
-		entry, err := fetchIssuerWithRetry(ctx, client, iss.JWKSURI, cfg.TTL.Duration, cache.Entry{}, false)
+		entry, err := fetchIssuerWithRetry(ctx, client, iss.JWKSURI, cfg.TTL.Duration, cfg.UseSubsecondTimestamps, cache.Entry{}, false)
 		if err != nil {
 			t.Logf("skip fetch %s: %v", iss.Issuer, err)
 			continue

@@ -25,15 +25,27 @@ type Entry struct {
 type Document map[string]Entry
 
 // BuildEntry constructs a cache entry with the provided TTL.
-func BuildEntry(jwks map[string]any, ttl time.Duration) Entry {
+// If useSubsecond is false (default), timestamps are stored as whole seconds only.
+func BuildEntry(jwks map[string]any, ttl time.Duration, useSubsecond bool) Entry {
 	now := time.Now()
 	exp := now.Add(ttl)
 	next := now.Add(ttl * 3 / 4) // refresh a bit before expiry
+
 	return Entry{
-		Expiration: float64(exp.Unix()) + float64(exp.Nanosecond())/1e9,
-		NextUpdate: float64(next.Unix()) + float64(next.Nanosecond())/1e9,
+		Expiration: toUnixFloat(exp, useSubsecond),
+		NextUpdate: toUnixFloat(next, useSubsecond),
 		JWKS:       jwks,
 	}
+}
+
+// toUnixFloat converts a time.Time to a float64 Unix timestamp.
+// If useSubsecond is false, returns whole seconds only.
+// If useSubsecond is true, includes nanosecond precision.
+func toUnixFloat(t time.Time, useSubsecond bool) float64 {
+	if useSubsecond {
+		return float64(t.Unix()) + float64(t.Nanosecond())/1e9
+	}
+	return float64(t.Unix())
 }
 
 // WriteDirectory writes one file per issuer using the hashed naming scheme.
