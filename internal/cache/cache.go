@@ -31,20 +31,21 @@ func BuildEntry(jwks map[string]any, ttl time.Duration, useSubsecond bool) Entry
 	exp := now.Add(ttl)
 	next := now.Add(ttl * 3 / 4) // refresh a bit before expiry
 
-	var expiration, nextUpdate float64
-	if useSubsecond {
-		expiration = float64(exp.Unix()) + float64(exp.Nanosecond())/1e9
-		nextUpdate = float64(next.Unix()) + float64(next.Nanosecond())/1e9
-	} else {
-		expiration = float64(exp.Unix())
-		nextUpdate = float64(next.Unix())
-	}
-
 	return Entry{
-		Expiration: expiration,
-		NextUpdate: nextUpdate,
+		Expiration: toUnixFloat(exp, useSubsecond),
+		NextUpdate: toUnixFloat(next, useSubsecond),
 		JWKS:       jwks,
 	}
+}
+
+// toUnixFloat converts a time.Time to a float64 Unix timestamp.
+// If useSubsecond is false, returns whole seconds only.
+// If useSubsecond is true, includes nanosecond precision.
+func toUnixFloat(t time.Time, useSubsecond bool) float64 {
+	if useSubsecond {
+		return float64(t.Unix()) + float64(t.Nanosecond())/1e9
+	}
+	return float64(t.Unix())
 }
 
 // WriteDirectory writes one file per issuer using the hashed naming scheme.
