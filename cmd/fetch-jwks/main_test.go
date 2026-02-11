@@ -83,7 +83,8 @@ func TestRetryThenSuccess(t *testing.T) {
 
 func TestETagNotModifiedUsesCache(t *testing.T) {
 	jwks := map[string]any{"keys": []map[string]any{{"kid": "existing"}}}
-	cached := cache.BuildEntry(jwks, time.Hour)
+	// Use subsecond timestamps for this test to ensure timestamps differ
+	cached := cache.BuildEntry(jwks, time.Hour, true)
 	cached.ETag = "abc"
 	var calls int32
 
@@ -118,10 +119,11 @@ func TestETagNotModifiedUsesCache(t *testing.T) {
 	}
 
 	cfg := config.Config{
-		CacheDir:       tmp,
-		CacheFile:      cacheFile,
-		TTL:            config.Duration{Duration: time.Hour},
-		RequestTimeout: config.Duration{Duration: 2 * time.Second},
+		CacheDir:               tmp,
+		CacheFile:              cacheFile,
+		TTL:                    config.Duration{Duration: time.Hour},
+		RequestTimeout:         config.Duration{Duration: 2 * time.Second},
+		UseSubsecondTimestamps: true,
 		Issuers: []config.IssuerConfig{{
 			Issuer: issuer,
 		}},
@@ -224,6 +226,98 @@ func TestWritesCacheDirectoryPerIssuer(t *testing.T) {
 func hashedName(issuer string) string {
 	sum := sha256.Sum256([]byte(issuer))
 	return hex.EncodeToString(sum[:])[:8]
+}
+
+func TestTimestampsDefaultToWholeSeconds(t *testing.T) {
+	jwks := map[string]any{"keys": []map[string]any{{"kid": "k1"}}}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/jwks") {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(jwks)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(srv.Close)
+
+	tmp := t.TempDir()
+	cfg := config.Config{
+		CacheDir:       tmp,
+		CacheFile:      filepath.Join(tmp, "cache.json"),
+		TTL:            config.Duration{Duration: time.Hour},
+		RequestTimeout: config.Duration{Duration: 2 * time.Second},
+		Issuers: []config.IssuerConfig{{
+			Issuer:  srv.URL,
+			JWKSURI: srv.URL + "/jwks",
+		}},
+	}
+
+	client := &http.Client{Timeout: cfg.RequestTimeout.Duration}
+	if _, err := fetcher.Run(context.Background(), client, cfg); err != nil {
+		t.Fatalf("runOnce failed: %v", err)
+	}
+
+	doc, err := cache.LoadFile(cfg.CacheFile)
+	if err != nil {
+		t.Fatalf("load cache file: %v", err)
+	}
+	entry := doc[cfg.Issuers[0].Issuer]
+
+	// Verify timestamps are whole seconds (no fractional part)
+	if entry.Expiration != float64(int64(entry.Expiration)) {
+		t.Errorf("expiration has fractional seconds: %f", entry.Expiration)
+	}
+	if entry.NextUpdate != float64(int64(entry.NextUpdate)) {
+		t.Errorf("next_update has fractional seconds: %f", entry.NextUpdate)
+	}
+}
+
+func TestTimestampsWithSubsecondEnabled(t *testing.T) {
+	jwks := map[string]any{"keys": []map[string]any{{"kid": "k1"}}}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/jwks") {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(jwks)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(srv.Close)
+
+	tmp := t.TempDir()
+	cfg := config.Config{
+		CacheDir:               tmp,
+		CacheFile:              filepath.Join(tmp, "cache.json"),
+		TTL:                    config.Duration{Duration: time.Hour},
+		RequestTimeout:         config.Duration{Duration: 2 * time.Second},
+		UseSubsecondTimestamps: true,
+		Issuers: []config.IssuerConfig{{
+			Issuer:  srv.URL,
+			JWKSURI: srv.URL + "/jwks",
+		}},
+	}
+
+	client := &http.Client{Timeout: cfg.RequestTimeout.Duration}
+	if _, err := fetcher.Run(context.Background(), client, cfg); err != nil {
+		t.Fatalf("runOnce failed: %v", err)
+	}
+
+	doc, err := cache.LoadFile(cfg.CacheFile)
+	if err != nil {
+		t.Fatalf("load cache file: %v", err)
+	}
+	entry := doc[cfg.Issuers[0].Issuer]
+
+	// With subsecond enabled, timestamps might have fractional parts
+	// We just verify they are valid float64 values
+	if entry.Expiration <= 0 {
+		t.Errorf("invalid expiration: %f", entry.Expiration)
+	}
+	if entry.NextUpdate <= 0 {
+		t.Errorf("invalid next_update: %f", entry.NextUpdate)
+	}
 }
 
 func expectPath(expect map[string]string, name string) (string, bool) {

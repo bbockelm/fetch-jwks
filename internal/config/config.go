@@ -14,13 +14,14 @@ import (
 
 // Config captures settings for fetching JWKS documents.
 type Config struct {
-	CacheFile      string         `yaml:"cache_file"`
-	CacheDir       string         `yaml:"cache_dir"`
-	TTL            Duration       `yaml:"ttl"`
-	RequestTimeout Duration       `yaml:"request_timeout"`
-	MaxParallel    int            `yaml:"max_parallel"`
-	MaxPerHost     int            `yaml:"max_parallel_per_host"`
-	Issuers        []IssuerConfig `yaml:"issuers"`
+	CacheFile              string         `yaml:"cache_file"`
+	CacheDir               string         `yaml:"cache_dir"`
+	TTL                    Duration       `yaml:"ttl"`
+	RequestTimeout         Duration       `yaml:"request_timeout"`
+	MaxParallel            int            `yaml:"max_parallel"`
+	MaxPerHost             int            `yaml:"max_parallel_per_host"`
+	UseSubsecondTimestamps bool           `yaml:"use_subsecond_timestamps"`
+	Issuers                []IssuerConfig `yaml:"issuers"`
 }
 
 // IssuerConfig represents a single issuer to fetch.
