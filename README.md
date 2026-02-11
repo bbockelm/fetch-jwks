@@ -2,6 +2,10 @@
 
 A Go command-line tool for fetching and caching JWKS documents from OAuth2/OIDC issuers. It supports retries with backoff and conditional requests via ETag/If-None-Match to avoid unnecessary downloads.
 
+## Standard
+
+This tool implements the specification documented at https://zenodo.org/records/18392301.
+
 ## Getting Started
 
 - Build: `make build`

@@ -33,6 +33,12 @@ func (i *issuerFlag) Set(value string) error {
 }
 
 func main() {
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
+		fmt.Fprintf(flag.CommandLine.Output(), "\nStandard: https://zenodo.org/records/18392301\n\n")
+		flag.PrintDefaults()
+	}
+
 	var (
 		configFile = flag.String("config", "/etc/fetch-jwks.conf", "Path to YAML config file")
 		configDir  = flag.String("config-dir", "/etc/fetch-jwks.config.d", "Directory of YAML config fragments")
