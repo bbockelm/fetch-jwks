@@ -30,7 +30,7 @@ func BuildEntry(jwks map[string]any, ttl time.Duration, useSubsecond bool) Entry
 	now := time.Now()
 	exp := now.Add(ttl)
 	next := now.Add(ttl * 3 / 4) // refresh a bit before expiry
-	
+
 	var expiration, nextUpdate float64
 	if useSubsecond {
 		expiration = float64(exp.Unix()) + float64(exp.Nanosecond())/1e9
@@ -39,7 +39,7 @@ func BuildEntry(jwks map[string]any, ttl time.Duration, useSubsecond bool) Entry
 		expiration = float64(exp.Unix())
 		nextUpdate = float64(next.Unix())
 	}
-	
+
 	return Entry{
 		Expiration: expiration,
 		NextUpdate: nextUpdate,
